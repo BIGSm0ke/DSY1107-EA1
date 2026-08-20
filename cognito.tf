@@ -59,3 +59,22 @@ resource "aws_cognito_user_pool_client" "spa" {
     id_token     = "minutes"
   }
 }
+
+
+resource "aws_cognito_user" "demo" {
+  user_pool_id = aws_cognito_user_pool.pool.id
+  username = "Mathias@gmail.com"
+  password = "Duoc2026"
+
+  attributes = {
+    email = "Mathias@gmail.com"
+    email_verified = true
+    name = "Mathias"
+  }
+  message_action = "SUPPRESS"
+  
+}
+
+output "app_client_id" {
+  value = aws_cognito_user_pool_client.spa.id
+}
