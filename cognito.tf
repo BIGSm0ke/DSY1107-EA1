@@ -75,6 +75,13 @@ resource "aws_cognito_user" "demo" {
   
 }
 
-output "app_client_id" {
-  value = aws_cognito_user_pool_client.spa.id
+output "user_pool_id" {
+  value       = aws_cognito_user_pool.pool.id
+  description = "ID del User Pool"
 }
+
+output "user_pool_client_id" {
+  value       = aws_cognito_user_pool_client.spa.id
+  description = "ID del App Client para el frontend"
+}
+

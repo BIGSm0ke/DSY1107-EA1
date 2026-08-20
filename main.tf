@@ -1,7 +1,19 @@
 resource "aws_apigatewayv2_api" "api_manager" {
   name          = "api-mindicador"
   protocol_type = "HTTP"
+}
 
+# 1. Autorizador JWT que conecta con Cognito
+resource "aws_apigatewayv2_authorizer" "cognito_jwt" {
+  api_id           = aws_apigatewayv2_api.api_manager.id
+  authorizer_type  = "JWT"
+  identity_sources = ["$request.header.Authorization"]
+  name             = "cognito-jwt-authorizer"
+
+  jwt_configuration {
+    audience = [aws_cognito_user_pool_client.spa.id]
+    issuer   = "https://cognito-idp.us-east-1.amazonaws.com/${aws_cognito_user_pool.pool.id}"
+  }
 }
 
 resource "aws_apigatewayv2_integration" "backend" {
@@ -12,17 +24,21 @@ resource "aws_apigatewayv2_integration" "backend" {
   payload_format_version = "1.0"
 }
 
+# 2. Ruta protegida con JWT
 resource "aws_apigatewayv2_route" "datos" {
-  api_id    = aws_apigatewayv2_api.api_manager.id
-  route_key = "GET /datos"
-  target    = "integrations/${aws_apigatewayv2_integration.backend.id}"
-
+  api_id             = aws_apigatewayv2_api.api_manager.id
+  route_key          = "GET /datos"
+  target             = "integrations/${aws_apigatewayv2_integration.backend.id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito_jwt.id
 }
+
 resource "aws_apigatewayv2_stage" "default" {
   api_id      = aws_apigatewayv2_api.api_manager.id
   name        = "$default"
   auto_deploy = true
 }
+
 resource "aws_apigatewayv2_stage" "dev" {
   api_id      = aws_apigatewayv2_api.api_manager.id
   name        = "dev"

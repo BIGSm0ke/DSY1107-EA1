@@ -2,105 +2,34 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Cliente Cognito Simple</title>
-  <style>
-    body { font-family: sans-serif; padding: 20px; max-width: 700px; margin: auto; }
-    button { padding: 10px 15px; margin: 5px; cursor: pointer; border: none; border-radius: 4px; }
-    .btn-blue { background-color: #2563eb; color: white; }
-    .btn-red { background-color: #dc2626; color: white; }
-    pre { background: #f4f4f4; padding: 15px; border-radius: 5px; overflow-x: auto; }
-  </style>
+  <title>Login PKCE + Cognito API</title>
 </head>
-<body>
+<body style="font-family: sans-serif; padding: 2rem;">
+  <h1>Autenticación PKCE y API Protegida</h1>
 
-  <h2>Prueba Cognito & API Gateway</h2>
-  
-  <div id="auth-section">
-    <button id="btn-login" class="btn-blue" onclick="login()">Iniciar Sesión</button>
-    <button id="btn-logout" class="btn-red" onclick="logout()" style="display:none;">Cerrar Sesión</button>
+  <!-- Vista: Desconectado -->
+  <div id="logged-out-view">
+    <button id="btn-login" style="padding: 10px 20px; cursor: pointer;">
+      Iniciar Sesión (PKCE)
+    </button>
   </div>
 
-  <p id="status-text">Estado: No autenticado</p>
-  <hr>
+  <!-- Vista: Conectado -->
+  <div id="logged-in-view" style="display: none;">
+    <p><strong>¡Autenticado con éxito!</strong></p>
+    <button id="btn-logout" style="padding: 5px 10px; cursor: pointer;">Cerrar Sesión</button>
+    <br><br>
+    
+    <button id="btn-fetch-datos" style="padding: 10px 20px; cursor: pointer; background-color: #007bff; color: white; border: none; border-radius: 4px;">
+      Obtener /datos (API Protegida)
+    </button>
 
-  <h3>3 · CONSUMIR APIS CON ESE TOKEN</h3>
-  <button class="btn-blue" onclick="consumirApi('/datos con token')">/datos con token</button>
-  <button class="btn-red" onclick="consumirApi('/datos sin token', false)">/datos sin token</button>
-  <button class="btn-blue" onclick="consumirApi('/publico/datos')">/publico/datos</button>
+    <h3>Resultado de la API:</h3>
+    <pre id="api-result" style="background: #f4f4f4; padding: 1rem; border-radius: 5px; max-height: 300px; overflow-y: auto;">
+Haz clic en el botón para consultar /datos...
+    </pre>
+  </div>
 
-  <h4>Respuesta API:</h4>
-  <pre id="output">Haz clic en un botón para probar...</pre>
-
-  <script>
-    // Configuración según tu Terraform
-    const COGNITO_DOMAIN = "dsy1107-grupo777.auth.us-east-1.amazoncognito.com";
-    const CLIENT_ID = "63pgkioq3tc43i7kh7i2cji82a";
-    const REDIRECT_URI = "http://localhost:5173/";
-    const API_URL = "https://<TU_API_GATEWAY_ID>.execute-api.us-east-1.amazonaws.com";
-
-    let accessToken = localStorage.getItem("access_token");
-
-    // Actualizar vista inicial si ya hay token guardado
-    if (accessToken) {
-      document.getElementById("status-text").innerText = "Estado: Autenticado ✅";
-      document.getElementById("btn-login").style.display = "none";
-      document.getElementById("btn-logout").style.display = "inline-block";
-    }
-
-    // 1. Redirigir al Hosted UI
-    function login() {
-      const url = `https://${COGNITO_DOMAIN}/login?client_id=${CLIENT_ID}&response_type=code&scope=openid+email+profile&redirect_uri=${encodeURIComponent(REDIRECT_URI)}`;
-      window.location.href = url;
-    }
-
-    // 2. Procesar el 'code' al volver del login
-    const urlParams = new URLSearchParams(window.location.search);
-    const code = urlParams.get('code');
-
-    if (code) {
-      fetch(`https://${COGNITO_DOMAIN}/oauth2/token`, {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({
-          grant_type: "authorization_code",
-          client_id: CLIENT_ID,
-          code: code,
-          redirect_uri: REDIRECT_URI
-        })
-      })
-      .then(res => res.json())
-      .then(data => {
-        if (data.access_token) {
-          localStorage.setItem("access_token", data.access_token);
-          window.location.href = REDIRECT_URI; // Limpiar URL
-        }
-      });
-    }
-
-    // 3. Consumir la API adjuntando el Token en la cabecera
-    function consumirApi(endpoint, enviarToken = true) {
-      const headers = {};
-      const token = localStorage.getItem("access_token");
-
-      if (enviarToken && token) {
-        headers["Authorization"] = `Bearer ${token}`;
-      }
-
-      fetch(`${API_URL}${endpoint}`, { headers })
-        .then(async res => {
-          const body = await res.json().catch(() => ({}));
-          document.getElementById("output").innerText = `HTTP ${res.status}\n\n` + JSON.stringify(body, null, 2);
-        })
-        .catch(err => {
-          document.getElementById("output").innerText = "Error: " + err.message;
-        });
-    }
-
-    // 4. Logout
-    function logout() {
-      localStorage.removeItem("access_token");
-      window.location.href = `https://${COGNITO_DOMAIN}/logout?client_id=${CLIENT_ID}&logout_uri=${encodeURIComponent(REDIRECT_URI)}`;
-    }
-  </script>
+  <script src="app.js"></script>
 </body>
 </html>
