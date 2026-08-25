@@ -1,22 +1,14 @@
-// Configuración que debe coincidir con tu Terraform
+console.log("🚀 1. El script app.js ha empezado a cargar.");
+
+// Configuración de tu entorno (Tus valores exactos)
 const CONFIG = {
-  domain: 'https://dsy1107-grupo777.auth.us-east-1.amazoncognito.com', // Reemplaza si cambia tu región/dominio
-  clientId: 'dhdqa9km1f5dcaf4med114d62',                                 
+  domain: 'https://dsy1107-grupo777.auth.us-east-1.amazoncognito.com',
+  clientId: '57hhl70565svsv0o25iavehd3f',                                
   redirectUri: 'http://localhost:5173/',
-  apiUrl: 'https://a6h9dp2hid.execute-api.us-east-1.amazonaws.com/dev/datos'
+  apiUrl: 'https://4x3tfgbts8.execute-api.us-east-1.amazonaws.com/dev/datos'
 };
 
-// Referencias de la UI
-const loggedOutView = document.getElementById('logged-out-view');
-const loggedInView = document.getElementById('logged-in-view');
-const btnLogin = document.getElementById('btn-login');
-const btnLogout = document.getElementById('btn-logout');
-const btnFetchDatos = document.getElementById('btn-fetch-datos');
-const apiResult = document.getElementById('api-result');
-
 // --- FUNCIONES CRIPTOGRÁFICAS PARA PKCE ---
-
-// Genera una cadena aleatoria (Code Verifier)
 function generateCodeVerifier() {
   const array = new Uint8Array(32);
   window.crypto.getRandomValues(array);
@@ -24,7 +16,6 @@ function generateCodeVerifier() {
     .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
-// Genera el Hash SHA-256 (Code Challenge) a partir del Verifier
 async function generateCodeChallenge(verifier) {
   const encoder = new TextEncoder();
   const data = encoder.encode(verifier);
@@ -33,126 +24,144 @@ async function generateCodeChallenge(verifier) {
     .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
-// --- FLUJO DE AUTENTICACIÓN ---
 
-// 1. Redirigir a Cognito con PKCE
-btnLogin.addEventListener('click', async () => {
-  const verifier = generateCodeVerifier();
-  sessionStorage.setItem('code_verifier', verifier); // Guardar verifier para el intercambio posterior
+// --- FLUJO PRINCIPAL (Espera a que el HTML cargue) ---
+document.addEventListener('DOMContentLoaded', () => {
+  console.log("✅ 2. El HTML cargó por completo. Buscando elementos de la interfaz...");
 
-  const challenge = await generateCodeChallenge(verifier);
+  // Referencias de la UI
+  const loggedOutView = document.getElementById('logged-out-view');
+  const loggedInView = document.getElementById('logged-in-view');
+  const btnLogin = document.getElementById('btn-login');
+  const btnLogout = document.getElementById('btn-logout');
+  const btnFetchDatos = document.getElementById('btn-fetch-datos');
+  const apiResult = document.getElementById('api-result');
 
-  const loginUrl = `${CONFIG.domain}/login?response_type=code` +
-    `&client_id=${CONFIG.clientId}` +
-    `&redirect_uri=${encodeURIComponent(CONFIG.redirectUri)}` +
-    `&scope=openid+email+profile` +
-    `&code_challenge=${challenge}` +
-    `&code_challenge_method=S256`;
-
-  window.location.href = loginUrl;
-});
-
-// 2. Intercambiar el código por los tokens usando el Code Verifier
-async function exchangeCodeForTokens(code) {
-  const verifier = sessionStorage.getItem('code_verifier');
-
-  if (!verifier) {
-    console.error('No se encontró el code_verifier en sessionStorage');
-    return;
+  // Si no encuentra el botón de login, avisa de inmediato
+  if (!btnLogin) {
+    console.error("❌ ERROR: No se encontró 'btn-login' en el HTML.");
+    return; 
   }
 
-  // Usamos URLSearchParams para que el Content-Type sea application/x-www-form-urlencoded
-  const params = new URLSearchParams();
-  params.append('grant_type', 'authorization_code');
-  params.append('client_id', CONFIG.clientId);
-  params.append('code', code);
-  params.append('redirect_uri', CONFIG.redirectUri);
-  params.append('code_verifier', verifier);
+  // 1. Iniciar Sesión (Redirige a Cognito)
+  btnLogin.addEventListener('click', async () => {
+    console.log("👉 Generando PKCE y redirigiendo a Cognito...");
+    const verifier = generateCodeVerifier();
+    sessionStorage.setItem('code_verifier', verifier); // Guardar clave
 
-  try {
-    const response = await fetch(`${CONFIG.domain}/oauth2/token`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded'
-      },
-      body: params
+    const challenge = await generateCodeChallenge(verifier);
+
+    const loginUrl = `${CONFIG.domain}/login?response_type=code` +
+      `&client_id=${CONFIG.clientId}` +
+      `&redirect_uri=${encodeURIComponent(CONFIG.redirectUri)}` +
+      `&scope=openid+email+profile` +
+      `&code_challenge=${challenge}` +
+      `&code_challenge_method=S256`;
+
+    window.location.href = loginUrl;
+  });
+
+  // 2. Intercambiar Código (Se ejecuta al volver de Cognito)
+  async function exchangeCodeForTokens(code) {
+    console.log("🔄 4. Intercambiando el código de la URL por un Token...");
+    const verifier = sessionStorage.getItem('code_verifier');
+
+    if (!verifier) {
+      console.error('❌ Error: No se encontró el code_verifier en sessionStorage. ¿Abriste una pestaña nueva?');
+      return;
+    }
+
+    const bodyData = new URLSearchParams({
+      grant_type: 'authorization_code',
+      client_id: CONFIG.clientId,
+      code: code,
+      redirect_uri: CONFIG.redirectUri,
+      code_verifier: verifier
     });
 
-    const data = await response.json();
-    console.log('Respuesta de Cognito:', data); // Mira esto en la consola F12
+    try {
+      const response = await fetch(`${CONFIG.domain}/oauth2/token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: bodyData.toString()
+      });
 
-    if (data.id_token) {
-      sessionStorage.setItem('id_token', data.id_token);
-      sessionStorage.removeItem('code_verifier');
-      window.history.replaceState({}, document.title, window.location.pathname);
-      renderUI();
-    } else {
-      alert(`Error de Cognito: ${data.error || 'Token no recibido'}`);
-    }
-  } catch (error) {
-    console.error('Error de red al intercambiar el token:', error);
-  }
-}
-
-// 3. Consultar la API Protegida /datos
-btnFetchDatos.addEventListener('click', async () => {
-  const idToken = sessionStorage.getItem('id_token');
-
-  if (!idToken) {
-    alert('No hay un token de sesión activo');
-    return;
-  }
-
-  apiResult.textContent = 'Cargando datos...';
-
-  try {
-    const response = await fetch(CONFIG.apiUrl, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${idToken}` // Token adjuntado en la cabecera
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`❌ Error HTTP ${response.status}: ${errorText}`);
+        return;
       }
-    });
 
-    if (!response.ok) {
-      throw new Error(`Error ${response.status}: ${response.statusText}`);
+      const data = await response.json();
+      console.log('✅ 5. Respuesta exitosa de Cognito:', data);
+
+      if (data.id_token) {
+        sessionStorage.setItem('id_token', data.id_token);
+        sessionStorage.removeItem('code_verifier'); // Limpieza
+        window.history.replaceState({}, document.title, window.location.pathname); // Quita el ?code de la URL
+        renderUI();
+      }
+    } catch (error) {
+      console.error('❌ Excepción de red / CORS:', error);
+    }
+  }
+
+  // 3. Consultar la API Protegida
+  btnFetchDatos.addEventListener('click', async () => {
+    const idToken = sessionStorage.getItem('id_token');
+    if (!idToken) {
+      alert('No hay un token de sesión activo');
+      return;
     }
 
-    const data = await response.json();
-    apiResult.textContent = JSON.stringify(data, null, 2);
-  } catch (error) {
-    apiResult.textContent = `Error al consultar la API: ${error.message}`;
+    apiResult.textContent = 'Cargando datos...';
+    try {
+      const response = await fetch(CONFIG.apiUrl, {
+        method: 'GET',
+        headers: { 'Authorization': `Bearer ${idToken}` }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      apiResult.textContent = JSON.stringify(data, null, 2);
+    } catch (error) {
+      apiResult.textContent = `Error al consultar la API: ${error.message}`;
+    }
+  });
+
+  // 4. Cerrar Sesión
+  btnLogout.addEventListener('click', () => {
+    sessionStorage.clear();
+    const logoutUrl = `${CONFIG.domain}/logout?client_id=${CONFIG.clientId}&logout_uri=${encodeURIComponent(CONFIG.redirectUri)}`;
+    window.location.href = logoutUrl;
+  });
+
+  // 5. Renderizar Vistas
+  function renderUI() {
+    const token = sessionStorage.getItem('id_token');
+    if (token) {
+      console.log("🔓 Estado: Usuario Conectado");
+      loggedOutView.style.display = 'none';
+      loggedInView.style.display = 'block';
+    } else {
+      console.log("🔒 Estado: Usuario Desconectado");
+      loggedOutView.style.display = 'block';
+      loggedInView.style.display = 'none';
+    }
   }
-});
 
-// Logout
-btnLogout.addEventListener('click', () => {
-  sessionStorage.clear();
-  const logoutUrl = `${CONFIG.domain}/logout?client_id=${CONFIG.clientId}&logout_uri=${encodeURIComponent(CONFIG.redirectUri)}`;
-  window.location.href = logoutUrl;
-});
-
-// Renderizar UI
-function renderUI() {
-  const token = sessionStorage.getItem('id_token');
-  if (token) {
-    loggedOutView.style.display = 'none';
-    loggedInView.style.display = 'block';
-  } else {
-    loggedOutView.style.display = 'block';
-    loggedInView.style.display = 'none';
-  }
-}
-
-// Inicialización al cargar la ventana
-function init() {
+  // 6. ¡Punto de arranque real!
+  console.log("🔍 3. Revisando si hay un parámetro ?code= en la URL...");
   const urlParams = new URLSearchParams(window.location.search);
   const code = urlParams.get('code');
 
   if (code) {
+    console.log("🎯 ¡Código detectado en la URL!: ", code);
     exchangeCodeForTokens(code);
   } else {
     renderUI();
   }
-}
-
-init();
+});

@@ -1,6 +1,14 @@
 resource "aws_apigatewayv2_api" "api_manager" {
   name          = "api-mindicador"
   protocol_type = "HTTP"
+
+  # ¡NUEVO!: Bloque de CORS para permitir que el frontend lo consulte
+  cors_configuration {
+    allow_origins = ["http://localhost:5173", "http://localhost:5500"] # Añade el puerto de tu Live Server si usas otro
+    allow_methods = ["GET", "OPTIONS"]
+    allow_headers = ["Authorization", "Content-Type"]
+    max_age       = 300
+  }
 }
 
 # 1. Autorizador JWT que conecta con Cognito
