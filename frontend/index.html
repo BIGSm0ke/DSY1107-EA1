@@ -1,35 +1,13 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <title>Login PKCE + Cognito API</title>
-</head>
-<body style="font-family: sans-serif; padding: 2rem;">
-  <h1>Autenticación PKCE y API Protegida</h1>
-
-  <!-- Vista: Desconectado -->
-  <div id="logged-out-view">
-    <button id="btn-login" style="padding: 10px 20px; cursor: pointer;">
-      Iniciar Sesión (PKCE)
-    </button>
-  </div>
-
-  <!-- Vista: Conectado -->
-  <div id="logged-in-view" style="display: none;">
-    <p><strong>¡Autenticado con éxito!</strong></p>
-    <button id="btn-logout" style="padding: 5px 10px; cursor: pointer;">Cerrar Sesión</button>
-    <br><br>
-    
-    <button id="btn-fetch-datos" style="padding: 10px 20px; cursor: pointer; background-color: #007bff; color: white; border: none; border-radius: 4px;">
-      Obtener /datos (API Protegida)
-    </button>
-
-    <h3>Resultado de la API:</h3>
-    <pre id="api-result" style="background: #f4f4f4; padding: 1rem; border-radius: 5px; max-height: 300px; overflow-y: auto;">
-Haz clic en el botón para consultar /datos...
-    </pre>
-  </div>
-
-  <script src="app.js"></script>
-</body>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vite + React</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
 </html>
